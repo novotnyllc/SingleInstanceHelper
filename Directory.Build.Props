@@ -3,7 +3,7 @@
     <Authors>Oren Novotny</Authors>
     <Copyright>Copyright (C) Oren Novotny</Copyright>
     <Description>Helper for Single Instance Applications for Windows Forms and WPF</Description>
-    <PackageTags>authenticode;key-vault;nuget</PackageTags>
+    <PackageTags>wpf;windows forms;single instance</PackageTags>
     <PackageProjectUrl>https://github.com/onovotny/SingleInstanceHelper</PackageProjectUrl>
     <PackageLicenseUrl>https://raw.githubusercontent.com/onovotny/SingleInstanceHelper/master/LICENSE</PackageLicenseUrl>
     <DebugType>embedded</DebugType>

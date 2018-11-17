@@ -29,8 +29,15 @@ steps:
 
 - task: DotNetCoreCLI@2
   inputs:
+    command: build
+    projects: '**/*.csproj'
+    arguments: -c $(BuildConfiguration)
+  displayName: Build
+
+- task: DotNetCoreCLI@2
+  inputs:
     command: pack
-    packagesToPack: '**/*.csproj'
+    packagesToPack: 'SingleInstanceHelper/*.csproj'
     configuration: $(BuildConfiguration)
     packDirectory: $(Build.ArtifactStagingDirectory)\Artifacts    
     verbosityPack: Minimal

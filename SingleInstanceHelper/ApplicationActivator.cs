@@ -1,6 +1,10 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Xml.Serialization;
 
@@ -8,7 +12,7 @@ namespace SingleInstanceHelper
 {
     public static class ApplicationActivator
     {
-        public static string UniqueName { get; set; }
+        public static string UniqueName { get; set; } = GetRunningProcessHash();
 
         private static Mutex _mutexApplication;
         private static readonly object _namedPipeServerThreadLock = new object();
@@ -18,18 +22,12 @@ namespace SingleInstanceHelper
         private static SynchronizationContext _syncContext;
         private static Action<string[]> _otherInstanceCallback;
 
-        private static string MutexName => $@"Mutex_{Environment.UserDomainName}\{Environment.UserName}_{UniqueName}";
-        private static string PipeName => $@"Pipe_{Environment.UserDomainName}\{Environment.UserName}_{UniqueName}";
+        private static string MutexName => $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
+        private static string PipeName => $@"Pipe_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
 
         public static bool LaunchOrReturn(Action<string[]> otherInstanceCallback, string[] args)
         {
-            if (otherInstanceCallback == null)
-                throw new ArgumentNullException(nameof(otherInstanceCallback));
-
-            if (string.IsNullOrWhiteSpace(UniqueName))
-                throw new InvalidOperationException($"'{nameof(UniqueName)}' must be set first");
-
-            _otherInstanceCallback = otherInstanceCallback;
+            _otherInstanceCallback = otherInstanceCallback ?? throw new ArgumentNullException(nameof(otherInstanceCallback));
 
             if (IsApplicationFirstInstance())
             {
@@ -159,6 +157,16 @@ namespace SingleInstanceHelper
 
             // Create a new pipe for next connection
             NamedPipeServerCreateServer();
+        }
+
+        private static string GetRunningProcessHash()
+        {
+            using (var hash = SHA256.Create())
+            {
+                var processPath = Process.GetCurrentProcess().MainModule.FileName;
+                var bytes = hash.ComputeHash(Encoding.UTF8.GetBytes(processPath));
+                return Convert.ToBase64String(bytes);
+            }
         }
     }
 }

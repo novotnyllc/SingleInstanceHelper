@@ -73,7 +73,7 @@ namespace SingleInstanceHelper
         {
             try
             {
-                using (var namedPipeClientStream = new NamedPipeClientStream(".", UniqueName, PipeDirection.Out))
+                using (var namedPipeClientStream = new NamedPipeClientStream(".", PipeName, PipeDirection.Out))
                 {
                     namedPipeClientStream.Connect(3000); // Maximum wait 3 seconds
 

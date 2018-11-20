@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
@@ -10,8 +9,14 @@ using System.Xml.Serialization;
 
 namespace SingleInstanceHelper
 {
+    /// <summary>
+    /// Helper for creating or passing command args to a single application instance
+    /// </summary>
     public static class ApplicationActivator
     {
+        /// <summary>
+        /// Unique name to base the single instance decision on. Default's to a hash based on the executable location.
+        /// </summary>
         public static string UniqueName { get; set; } = GetRunningProcessHash();
 
         private static Mutex _mutexApplication;
@@ -25,6 +30,14 @@ namespace SingleInstanceHelper
         private static string GetMutexName() => $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
         private static string GetPipeName() => $@"Pipe_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
 
+        /// <summary>
+        /// Determines if the application should continue launching or return because it's not the first instance.
+        /// When not the first instance, the command line args will be passed to the first one. 
+        /// </summary>
+        /// <param name="otherInstanceCallback">Callback to execute on the first instance with command line args from subsequent launches.
+        /// Will not run on the main thread, marshalling may be required.</param>
+        /// <param name="args">Arguments from Main()</param>
+        /// <returns>true if the first instance, false if it's not the first instance.</returns>
         public static bool LaunchOrReturn(Action<string[]> otherInstanceCallback, string[] args)
         {
             _otherInstanceCallback = otherInstanceCallback ?? throw new ArgumentNullException(nameof(otherInstanceCallback));

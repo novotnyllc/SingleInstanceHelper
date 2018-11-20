@@ -7,6 +7,5 @@
 
   <ItemGroup>
     <None Include="..\THIRD-PARTY-NOTICES.TXT" PackagePath="" Pack="true" />
-    <None Include="..\LICENSE" PackagePath="" Pack="true" />
   </ItemGroup>
 </Project>

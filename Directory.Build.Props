@@ -5,7 +5,7 @@
     <Description>Helper for Single Instance Applications for Windows Forms and WPF</Description>
     <PackageTags>wpf;windows forms;single instance</PackageTags>
     <PackageProjectUrl>https://github.com/onovotny/SingleInstanceHelper</PackageProjectUrl>
-    <PackageLicenseUrl>https://raw.githubusercontent.com/onovotny/SingleInstanceHelper/master/LICENSE</PackageLicenseUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <DebugType>embedded</DebugType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

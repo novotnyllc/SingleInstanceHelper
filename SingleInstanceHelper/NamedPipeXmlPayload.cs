@@ -5,7 +5,7 @@ using System.Xml.Serialization;
 
 namespace SingleInstanceHelper
 {
-    public class NamedPipeXmlPayload
+    internal class NamedPipeXmlPayload
     {
         /// <summary>
         ///     A list of command line arguments.

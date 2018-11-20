@@ -22,8 +22,8 @@ namespace SingleInstanceHelper
         private static SynchronizationContext _syncContext;
         private static Action<string[]> _otherInstanceCallback;
 
-        private static string MutexName => $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
-        private static string PipeName => $@"Pipe_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
+        private static string GetMutexName() => $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
+        private static string GetPipeName() => $@"Pipe_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
 
         public static bool LaunchOrReturn(Action<string[]> otherInstanceCallback, string[] args)
         {
@@ -56,13 +56,16 @@ namespace SingleInstanceHelper
         /// <returns></returns>
         private static bool IsApplicationFirstInstance()
         {
-            // Allow for multiple runs but only try and get the mutex once
-            if (_mutexApplication == null)
+            lock (_namedPipeServerThreadLock)
             {
-                _mutexApplication = new Mutex(true, MutexName, out _firstApplicationInstance);
-            }
+                // Allow for multiple runs but only try and get the mutex once
+                if (_mutexApplication == null)
+                {
+                    _mutexApplication = new Mutex(true, GetMutexName(), out _firstApplicationInstance);
+                }
 
-            return _firstApplicationInstance;
+                return _firstApplicationInstance;
+            }
         }
 
         /// <summary>
@@ -73,7 +76,7 @@ namespace SingleInstanceHelper
         {
             try
             {
-                using (var namedPipeClientStream = new NamedPipeClientStream(".", PipeName, PipeDirection.Out))
+                using (var namedPipeClientStream = new NamedPipeClientStream(".", GetPipeName(), PipeDirection.Out))
                 {
                     namedPipeClientStream.Connect(3000); // Maximum wait 3 seconds
 
@@ -96,7 +99,7 @@ namespace SingleInstanceHelper
             // 
             // Create pipe and start the async connection wait
             _namedPipeServerStream = new NamedPipeServerStream(
-                PipeName,
+                GetPipeName(),
                 PipeDirection.In,
                 1,
                 PipeTransmissionMode.Byte,

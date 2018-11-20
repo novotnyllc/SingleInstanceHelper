@@ -20,10 +20,9 @@ namespace SingleInstanceHelper
         public static string UniqueName { get; set; } = GetRunningProcessHash();
 
         private static Mutex _mutexApplication;
-        private static readonly object _namedPipeServerThreadLock = new object();
+        private static readonly object _mutexLock = new object();
         private static bool _firstApplicationInstance;
         private static NamedPipeServerStream _namedPipeServerStream;
-        private static NamedPipeXmlPayload _namedPipeXmlPayload;
         private static SynchronizationContext _syncContext;
         private static Action<string[]> _otherInstanceCallback;
 
@@ -69,16 +68,19 @@ namespace SingleInstanceHelper
         /// <returns></returns>
         private static bool IsApplicationFirstInstance()
         {
-            lock (_namedPipeServerThreadLock)
+            if (_mutexApplication == null)
             {
-                // Allow for multiple runs but only try and get the mutex once
-                if (_mutexApplication == null)
+                lock (_mutexLock)
                 {
-                    _mutexApplication = new Mutex(true, GetMutexName(), out _firstApplicationInstance);
+                    // Allow for multiple runs but only try and get the mutex once
+                    if (_mutexApplication == null)
+                    {
+                        _mutexApplication = new Mutex(true, GetMutexName(), out _firstApplicationInstance);
+                    }
                 }
-
-                return _firstApplicationInstance;
             }
+
+            return _firstApplicationInstance;
         }
 
         /// <summary>
@@ -108,7 +110,6 @@ namespace SingleInstanceHelper
         /// </summary>
         private static void NamedPipeServerCreateServer()
         {
-
             // 
             // Create pipe and start the async connection wait
             _namedPipeServerStream = new NamedPipeServerStream(
@@ -117,12 +118,9 @@ namespace SingleInstanceHelper
                 1,
                 PipeTransmissionMode.Byte,
                 PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
- 
 
-            
             // Begin async wait for connections
             _namedPipeServerStream.BeginWaitForConnection(NamedPipeServerConnectionCallback, _namedPipeServerStream);
-            
         }
 
         /// <summary>
@@ -136,22 +134,17 @@ namespace SingleInstanceHelper
                 // End waiting for the connection
                 _namedPipeServerStream.EndWaitForConnection(iAsyncResult);
 
-                // Read data and prevent access to _namedPipeXmlPayload during threaded operations
-                lock (_namedPipeServerThreadLock)
-                {
-                    // Read data from client
-                    var xmlSerializer = new XmlSerializer(typeof(NamedPipeXmlPayload));
-                    _namedPipeXmlPayload = (NamedPipeXmlPayload)xmlSerializer.Deserialize(_namedPipeServerStream);
+                var xmlSerializer = new XmlSerializer(typeof(NamedPipeXmlPayload));
+                var namedPipeXmlPayload = (NamedPipeXmlPayload)xmlSerializer.Deserialize(_namedPipeServerStream);
 
-                    // _namedPipeXmlPayload contains the data sent from the other instance
-                    if (_syncContext != null)
-                    {
-                        _syncContext.Post(_ => _otherInstanceCallback(_namedPipeXmlPayload.CommandLineArguments.ToArray()), null);
-                    }
-                    else
-                    {
-                        _otherInstanceCallback(_namedPipeXmlPayload.CommandLineArguments.ToArray());
-                    }
+                // namedPipeXmlPayload contains the data sent from the other instance
+                if (_syncContext != null)
+                {
+                    _syncContext.Post(_ => _otherInstanceCallback(namedPipeXmlPayload.CommandLineArguments.ToArray()), null);
+                }
+                else
+                {
+                    _otherInstanceCallback(namedPipeXmlPayload.CommandLineArguments.ToArray());
                 }
             }
             catch (ObjectDisposedException)

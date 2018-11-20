@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -51,7 +52,7 @@ namespace SingleInstanceHelper
             else
             {
                 // We are not the first instance, send the named pipe message with our payload and stop loading
-                var namedPipeXmlPayload = new NamedPipeXmlPayload
+                var namedPipeXmlPayload = new Payload
                 {
                     CommandLineArguments = Environment.GetCommandLineArgs().ToList()
                 };
@@ -87,7 +88,7 @@ namespace SingleInstanceHelper
         ///     Uses a named pipe to send the currently parsed options to an already running instance.
         /// </summary>
         /// <param name="namedPipePayload"></param>
-        private static void NamedPipeClientSendOptions(NamedPipeXmlPayload namedPipePayload)
+        private static void NamedPipeClientSendOptions(Payload namedPipePayload)
         {
             try
             {
@@ -95,8 +96,8 @@ namespace SingleInstanceHelper
                 {
                     namedPipeClientStream.Connect(3000); // Maximum wait 3 seconds
 
-                    var xmlSerializer = new XmlSerializer(typeof(NamedPipeXmlPayload));
-                    xmlSerializer.Serialize(namedPipeClientStream, namedPipePayload);
+                    var ser = new DataContractJsonSerializer(typeof(Payload));
+                    ser.WriteObject(namedPipeClientStream, namedPipePayload);
                 }
             }
             catch (Exception)
@@ -134,17 +135,17 @@ namespace SingleInstanceHelper
                 // End waiting for the connection
                 _namedPipeServerStream.EndWaitForConnection(iAsyncResult);
 
-                var xmlSerializer = new XmlSerializer(typeof(NamedPipeXmlPayload));
-                var namedPipeXmlPayload = (NamedPipeXmlPayload)xmlSerializer.Deserialize(_namedPipeServerStream);
+                var ser = new DataContractJsonSerializer(typeof(Payload));
+                var payload = (Payload)ser.ReadObject(_namedPipeServerStream);
 
-                // namedPipeXmlPayload contains the data sent from the other instance
+                // payload contains the data sent from the other instance
                 if (_syncContext != null)
                 {
-                    _syncContext.Post(_ => _otherInstanceCallback(namedPipeXmlPayload.CommandLineArguments.ToArray()), null);
+                    _syncContext.Post(_ => _otherInstanceCallback(payload.CommandLineArguments.ToArray()), null);
                 }
                 else
                 {
-                    _otherInstanceCallback(namedPipeXmlPayload.CommandLineArguments.ToArray());
+                    _otherInstanceCallback(payload.CommandLineArguments.ToArray());
                 }
             }
             catch (ObjectDisposedException)

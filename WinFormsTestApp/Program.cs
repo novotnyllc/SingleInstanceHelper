@@ -18,7 +18,7 @@ namespace WinFormsTestApp
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            var first = ApplicationActivator.LaunchOrReturn(otherInstance => { MessageBox.Show("got data"); }, args);
+            var first = ApplicationActivator.LaunchOrReturn(otherInstance => { MessageBox.Show("got data: " + otherInstance.Skip(1).FirstOrDefault()); }, args);
             if(!first)
                 return; 
             Application.Run(new Form1());

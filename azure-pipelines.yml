@@ -7,17 +7,13 @@ pr:
   - rel/*
 
 pool:
-  vmImage: vs2017-win2016
+  vmImage: windows-latest
 
-variables: 
+variables:
   BuildConfiguration: Release
 
 steps:
-- task: DotNetCoreInstaller@0
-  inputs:
-    version: '3.0.100-preview-009754'
-
-- task: DotNetCoreCLI@2  
+- task: DotNetCoreCLI@2
   inputs:
     command: custom
     custom: tool
@@ -25,7 +21,7 @@ steps:
   displayName: Install NBGV tool
 
 - script: nbgv cloud
-  displayName: Set Version
+  displayName: Set NBGV Version
 
 - task: DotNetCoreCLI@2
   inputs:
@@ -39,10 +35,10 @@ steps:
     command: pack
     packagesToPack: 'SingleInstanceHelper/*.csproj'
     configuration: $(BuildConfiguration)
-    packDirectory: $(Build.ArtifactStagingDirectory)\Artifacts    
+    packDirectory: $(Build.ArtifactStagingDirectory)\Artifacts
     verbosityPack: Minimal
-  displayName: Pack  
-    
+  displayName: Pack
+
 - task: PowerShell@2
   displayName: Authenticode Sign artifacts
   inputs:

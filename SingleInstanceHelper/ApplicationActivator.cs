@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
-using System.Xml.Serialization;
 
 namespace SingleInstanceHelper
 {
@@ -32,7 +31,7 @@ namespace SingleInstanceHelper
 
         /// <summary>
         /// Determines if the application should continue launching or return because it's not the first instance.
-        /// When not the first instance, the command line args will be passed to the first one. 
+        /// When not the first instance, the command line args will be passed to the first one.
         /// </summary>
         /// <param name="otherInstanceCallback">Callback to execute on the first instance with command line args from subsequent launches.
         /// Will not run on the main thread, marshalling may be required.</param>
@@ -111,7 +110,6 @@ namespace SingleInstanceHelper
         /// </summary>
         private static void NamedPipeServerCreateServer()
         {
-            // 
             // Create pipe and start the async connection wait
             _namedPipeServerStream = new NamedPipeServerStream(
                 GetPipeName(),
@@ -171,12 +169,10 @@ namespace SingleInstanceHelper
 
         private static string GetRunningProcessHash()
         {
-            using (var hash = SHA256.Create())
-            {
-                var processPath = Process.GetCurrentProcess().MainModule.FileName;
-                var bytes = hash.ComputeHash(Encoding.UTF8.GetBytes(processPath));
-                return Convert.ToBase64String(bytes);
-            }
+            using var hash = SHA256.Create();
+            var processPath = Assembly.GetEntryAssembly()!.Location;
+            var bytes = hash.ComputeHash(Encoding.UTF8.GetBytes(processPath));
+            return Convert.ToBase64String(bytes);
         }
     }
 }

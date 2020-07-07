@@ -45,7 +45,7 @@ namespace SingleInstanceHelper
             {
                 _syncContext = SynchronizationContext.Current;
                 // Setup Named Pipe listener
-                NamedPipeServerCreateServer();
+                CreateNamedPipeServer();
                 return true;
             }
             else
@@ -57,7 +57,7 @@ namespace SingleInstanceHelper
                 };
 
                 // Send the message
-                NamedPipeClientSendOptions(namedPipeXmlPayload);
+                SendOptionsToNamedPipe(namedPipeXmlPayload);
                 return false; // Signal to quit
             }
         }
@@ -87,17 +87,15 @@ namespace SingleInstanceHelper
         ///     Uses a named pipe to send the currently parsed options to an already running instance.
         /// </summary>
         /// <param name="namedPipePayload"></param>
-        private static void NamedPipeClientSendOptions(Payload namedPipePayload)
+        private static void SendOptionsToNamedPipe(Payload namedPipePayload)
         {
             try
             {
-                using (var namedPipeClientStream = new NamedPipeClientStream(".", GetPipeName(), PipeDirection.Out))
-                {
-                    namedPipeClientStream.Connect(3000); // Maximum wait 3 seconds
+                using var namedPipeClientStream = new NamedPipeClientStream(".", GetPipeName(), PipeDirection.Out);
+                namedPipeClientStream.Connect(3000); // Maximum wait 3 seconds
 
-                    var ser = new DataContractJsonSerializer(typeof(Payload));
-                    ser.WriteObject(namedPipeClientStream, namedPipePayload);
-                }
+                var ser = new DataContractJsonSerializer(typeof(Payload));
+                ser.WriteObject(namedPipeClientStream, namedPipePayload);
             }
             catch (Exception)
             {
@@ -108,7 +106,7 @@ namespace SingleInstanceHelper
         /// <summary>
         ///     Starts a new pipe server if one isn't already active.
         /// </summary>
-        private static void NamedPipeServerCreateServer()
+        private static void CreateNamedPipeServer()
         {
             // Create pipe and start the async connection wait
             _namedPipeServerStream = new NamedPipeServerStream(
@@ -164,7 +162,7 @@ namespace SingleInstanceHelper
             }
 
             // Create a new pipe for next connection
-            NamedPipeServerCreateServer();
+            CreateNamedPipeServer();
         }
 
         private static string GetRunningProcessHash()

@@ -21,11 +21,12 @@ namespace SingleInstanceHelper
         /// </summary>
         public static string UniqueName { get; set; } = GetRunningProcessHash();
 
-        private static Mutex _mutexApplication;
-        private static readonly object _mutexLock = new object();
-        private static bool _firstApplicationInstance;
-        private static SynchronizationContext _syncContext;
-        private static Action<IReadOnlyList<string>> _otherInstanceCallback;
+        /// <summary>
+        /// Checks if this is the first instance of this
+        /// application. Can be evaluated multiple times.
+        /// </summary>
+        /// <returns></returns>
+        private static readonly Lazy<bool> IsApplicationFirstInstance = new Lazy<bool>(IsApplicationFirstInstanceImpl);
 
         private static string GetMutexName() =>
             $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
@@ -40,53 +41,31 @@ namespace SingleInstanceHelper
         /// <param name="otherInstanceCallback">Callback to execute on the first instance with command line args
         /// from subsequent launches. Will run on the current synchronization context.</param>
         /// <returns>true if the first instance, false if it's not the first instance.</returns>
-        public static async Task<bool> LaunchOrReturnAsync(Action<IReadOnlyList<string>> otherInstanceCallback)
+        public static async Task<bool> LaunchOrReturnAsync(Action<IReadOnlyList<string>>? otherInstanceCallback)
         {
-            _otherInstanceCallback =
-                otherInstanceCallback ?? throw new ArgumentNullException(nameof(otherInstanceCallback));
-
-            if (IsApplicationFirstInstance())
+            if (IsApplicationFirstInstance.Value)
             {
-                _syncContext = SynchronizationContext.Current;
                 // Setup Named Pipe listener
+                if (otherInstanceCallback != null)
 #pragma warning disable 4014
-                Task.Run(CreateNamedPipeServer).ConfigureAwait(false);
+                    Task.Run(async () => await CreateNamedPipeServer(otherInstanceCallback)).ConfigureAwait(false);
 #pragma warning restore 4014
                 return true;
             }
-            else
-            {
-                // We are not the first instance, send the named pipe message with our payload and stop loading
-                var namedPipeXmlPayload = new Payload
-                {
-                    CommandLineArguments = Environment.GetCommandLineArgs().ToList()
-                };
 
-                // Send the message
-                await SendOptionsToNamedPipe(namedPipeXmlPayload);
-                return false; // Signal to quit
-            }
+            // We are not the first instance, send the named pipe message with our payload and stop loading
+            var namedPipeXmlPayload =
+                new Payload {CommandLineArguments = Environment.GetCommandLineArgs().ToList()};
+
+            // Send the message
+            await SendOptionsToNamedPipe(namedPipeXmlPayload);
+            return false; // Signal to quit
         }
 
-        /// <summary>
-        ///     Checks if this is the first instance of this application. Can be run multiple times.
-        /// </summary>
-        /// <returns></returns>
-        private static bool IsApplicationFirstInstance()
+        private static bool IsApplicationFirstInstanceImpl()
         {
-            if (_mutexApplication == null)
-            {
-                lock (_mutexLock)
-                {
-                    // Allow for multiple runs but only try and get the mutex once
-                    if (_mutexApplication == null)
-                    {
-                        _mutexApplication = new Mutex(true, GetMutexName(), out _firstApplicationInstance);
-                    }
-                }
-            }
-
-            return _firstApplicationInstance;
+            var mutex = new Mutex(true, GetMutexName(), out var isFirstInstance);
+            return isFirstInstance;
         }
 
         /// <summary>
@@ -98,16 +77,13 @@ namespace SingleInstanceHelper
             using var pipeClient = new NamedPipeClientStream(".", GetPipeName(), PipeDirection.Out);
             await pipeClient.ConnectAsync(3000); // Maximum wait 3 seconds
 
-            if (pipeClient.IsConnected)
-            {
-                await JsonSerializer.SerializeAsync(pipeClient, namedPipePayload);
-            }
+            if (pipeClient.IsConnected) await JsonSerializer.SerializeAsync(pipeClient, namedPipePayload);
         }
 
         /// <summary>
         ///     Starts a new pipe server if one isn't already active.
         /// </summary>
-        private static async Task CreateNamedPipeServer()
+        private static async Task CreateNamedPipeServer(Action<IReadOnlyList<string>> otherInstanceCallback)
         {
             while (true)
             {
@@ -121,15 +97,13 @@ namespace SingleInstanceHelper
 
                 var payload = await JsonSerializer.DeserializeAsync<Payload>(pipeServer);
 
+                var syncCtx = SynchronizationContext.Current;
+
                 // payload contains the data sent from the other instance
-                if (_syncContext != null)
-                {
-                    _syncContext.Post(_ => _otherInstanceCallback(payload.CommandLineArguments), null);
-                }
+                if (syncCtx != null)
+                    syncCtx.Post(_ => otherInstanceCallback(payload.CommandLineArguments), null);
                 else
-                {
-                    _otherInstanceCallback(payload.CommandLineArguments);
-                }
+                    otherInstanceCallback(payload.CommandLineArguments);
             }
         }
 

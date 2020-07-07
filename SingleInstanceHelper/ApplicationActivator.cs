@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO.Pipes;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Serialization.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,7 +25,7 @@ namespace SingleInstanceHelper
         private static readonly object _mutexLock = new object();
         private static bool _firstApplicationInstance;
         private static SynchronizationContext _syncContext;
-        private static Action<string[]> _otherInstanceCallback;
+        private static Action<IReadOnlyList<string>> _otherInstanceCallback;
 
         private static string GetMutexName() =>
             $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
@@ -39,7 +40,7 @@ namespace SingleInstanceHelper
         /// <param name="otherInstanceCallback">Callback to execute on the first instance with command line args
         /// from subsequent launches. Will run on the current synchronization context.</param>
         /// <returns>true if the first instance, false if it's not the first instance.</returns>
-        public static async Task<bool> LaunchOrReturnAsync(Action<string[]> otherInstanceCallback)
+        public static async Task<bool> LaunchOrReturnAsync(Action<IReadOnlyList<string>> otherInstanceCallback)
         {
             _otherInstanceCallback =
                 otherInstanceCallback ?? throw new ArgumentNullException(nameof(otherInstanceCallback));
@@ -99,8 +100,7 @@ namespace SingleInstanceHelper
 
             if (pipeClient.IsConnected)
             {
-                var ser = new DataContractJsonSerializer(typeof(Payload));
-                ser.WriteObject(pipeClient, namedPipePayload);
+                await JsonSerializer.SerializeAsync(pipeClient, namedPipePayload);
             }
         }
 
@@ -119,17 +119,16 @@ namespace SingleInstanceHelper
                 await pipeServer.WaitForConnectionAsync();
                 if (!pipeServer.IsConnected) return;
 
-                var ser = new DataContractJsonSerializer(typeof(Payload));
-                var payload = (Payload)ser.ReadObject(pipeServer);
+                var payload = await JsonSerializer.DeserializeAsync<Payload>(pipeServer);
 
                 // payload contains the data sent from the other instance
                 if (_syncContext != null)
                 {
-                    _syncContext.Post(_ => _otherInstanceCallback(payload.CommandLineArguments.ToArray()), null);
+                    _syncContext.Post(_ => _otherInstanceCallback(payload.CommandLineArguments), null);
                 }
                 else
                 {
-                    _otherInstanceCallback(payload.CommandLineArguments.ToArray());
+                    _otherInstanceCallback(payload.CommandLineArguments);
                 }
             }
         }

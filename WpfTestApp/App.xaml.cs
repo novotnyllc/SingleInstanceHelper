@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using SingleInstanceHelper;
 
 namespace WpfTestApp
@@ -14,15 +8,11 @@ namespace WpfTestApp
     /// </summary>
     public partial class App : Application
     {
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
-
-            var first = ApplicationActivator.LaunchOrReturn(otherInstance => { MessageBox.Show("got data"); }, e.Args);
-            if (!first)
-            {
-                Shutdown();
-            }
-
+            var first = await ApplicationActivator.LaunchOrReturnAsync(
+                otherInstance => { MessageBox.Show("got data"); });
+            if (!first) Shutdown();
 
             base.OnStartup(e);
         }

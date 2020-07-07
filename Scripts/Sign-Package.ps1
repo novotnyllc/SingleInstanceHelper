@@ -19,7 +19,7 @@ $nupkgs = gci $Env:ArtifactDirectory\*.nupkg -recurse | Select -ExpandProperty F
 foreach ($nupkg in $nupkgs){
 	Write-Host "Submitting $nupkg for signing"
 
-	.\SignClient 'sign' -c $appSettings -i $nupkg -f $fileList -r $Env:SignClientUser -s $Env:SignClientSecret -n 'SingleInstanceHelper' -d 'SingleInstanceHelper' -u 'https://github.com/onovotny/SingleInstanceHelper' 
+	.\SignClient 'sign' -c $appSettings -i $nupkg -f $fileList -r $Env:SignClientUser -s $Env:SignClientSecret -n 'SingleInstanceHelper' -d 'SingleInstanceHelper' -u 'https://github.com/novotnyllc/SingleInstanceHelper'
 
 	Write-Host "Finished signing $nupkg"
 }

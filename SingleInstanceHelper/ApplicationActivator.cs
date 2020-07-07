@@ -76,11 +76,17 @@ namespace SingleInstanceHelper
             Action<IReadOnlyList<string>> otherInstanceCallback)
         {
             var pipeName = GetPipeName(uniqueName);
+            var pipeFlags =
+#if NETSTANDARD
+                PipeOptions.Asynchronous;
+#else
+                PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly;
+#endif
             while (true)
             {
                 // Create pipe and start the async connection wait
                 using var pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.In, 1,
-                    PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
+                    PipeTransmissionMode.Byte, pipeFlags);
 
                 // Async wait for connections
                 await pipeServer.WaitForConnectionAsync();

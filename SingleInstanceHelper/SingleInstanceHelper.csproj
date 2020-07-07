@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netcoreapp3.1</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\THIRD-PARTY-NOTICES.TXT" PackagePath="" Pack="true" />
-    <PackageReference Condition="'$(TargetFramework)' == 'netcoreapp2.1'" Include="System.Text.Json" Version="4.7.2" />
+    <PackageReference Condition="'$(TargetFramework)' != 'netcoreapp3.1'" Include="System.Text.Json" Version="4.7.2" />
   </ItemGroup>
   <Import Project="NuGet.props" />
 </Project>

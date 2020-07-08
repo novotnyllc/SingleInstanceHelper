@@ -16,39 +16,35 @@ namespace SingleInstanceHelper
     /// </summary>
     public static class ApplicationActivator
     {
-        /// <summary>
-        /// Unique name to base the single instance decision on. Default's to a hash based on the executable location.
-        /// </summary>
-        public static string UniqueName { get; set; } = GetRunningProcessHash();
+        private static readonly string DefaultUniqueName = GetRunningProcessHash();
 
-        /// <summary>
-        /// Checks if this is the first instance of this
-        /// application. Can be evaluated multiple times.
-        /// </summary>
-        /// <returns></returns>
-        private static readonly Lazy<bool> IsApplicationFirstInstance = new Lazy<bool>(IsApplicationFirstInstanceImpl);
+        private static string GetMutexName(string uniqueName) =>
+            $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{uniqueName}";
 
-        private static string GetMutexName() =>
-            $@"Mutex_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
-
-        private static string GetPipeName() =>
-            $@"Pipe_{Environment.UserDomainName}_{Environment.UserName}_{UniqueName}";
+        private static string GetPipeName(string uniqueName) =>
+            $@"Pipe_{Environment.UserDomainName}_{Environment.UserName}_{uniqueName}";
 
         /// <summary>
         /// Determines if the application should continue launching or return because it's not the first instance.
         /// When not the first instance, the command line args will be passed to the first one.
         /// </summary>
         /// <param name="otherInstanceCallback">Callback to execute on the first instance with command line args
-        /// from subsequent launches. Will run on the current synchronization context.</param>
-        /// <returns>true if the first instance, false if it's not the first instance.</returns>
-        public static async Task<bool> LaunchOrReturnAsync(Action<IReadOnlyList<string>>? otherInstanceCallback)
+        /// from subsequent launches. If specified, it will run on the current synchronization context.</param>
+        /// <param name="uniqueName">A unique identifier of the app running. Calling this method from
+        /// many different apps with the same <paramref name="uniqueName"/> specified will return
+        /// <see langword="true"/> only on one of them</param>
+        /// <returns>Whether this is the first instance of the application that
+        /// called this method.</returns>
+        public static async Task<bool> LaunchOrReturnAsync(
+            Action<IReadOnlyList<string>>? otherInstanceCallback = null, string? uniqueName = null)
         {
-            if (IsApplicationFirstInstance.Value)
+            var un = uniqueName ?? DefaultUniqueName;
+            if (IsApplicationFirstInstance(un))
             {
                 // Setup Named Pipe listener
                 if (otherInstanceCallback != null)
 #pragma warning disable 4014
-                    Task.Run(async () => await CreateNamedPipeServer(otherInstanceCallback)).ConfigureAwait(false);
+                    Task.Run(async () => await CreateNamedPipeServer(un, otherInstanceCallback)).ConfigureAwait(false);
 #pragma warning restore 4014
                 return true;
             }
@@ -58,37 +54,32 @@ namespace SingleInstanceHelper
                 new Payload {CommandLineArguments = Environment.GetCommandLineArgs().ToList()};
 
             // Send the message
-            await SendOptionsToNamedPipe(namedPipeXmlPayload);
+            await SendOptionsToNamedPipe(un, namedPipeXmlPayload);
             return false; // Signal to quit
         }
 
-        private static bool IsApplicationFirstInstanceImpl()
+        private static bool IsApplicationFirstInstance(string uniqueName)
         {
-            var mutex = new Mutex(true, GetMutexName(), out var isFirstInstance);
+            var mutex = new Mutex(true, GetMutexName(uniqueName), out var isFirstInstance);
             return isFirstInstance;
         }
 
-        /// <summary>
-        ///     Uses a named pipe to send the currently parsed options to an already running instance.
-        /// </summary>
-        /// <param name="namedPipePayload"></param>
-        private static async Task SendOptionsToNamedPipe(Payload namedPipePayload)
+        private static async Task SendOptionsToNamedPipe(string uniqueName, Payload namedPipePayload)
         {
-            using var pipeClient = new NamedPipeClientStream(".", GetPipeName(), PipeDirection.Out);
+            using var pipeClient = new NamedPipeClientStream(".", GetPipeName(uniqueName), PipeDirection.Out);
             await pipeClient.ConnectAsync(3000); // Maximum wait 3 seconds
 
             if (pipeClient.IsConnected) await JsonSerializer.SerializeAsync(pipeClient, namedPipePayload);
         }
 
-        /// <summary>
-        ///     Starts a new pipe server if one isn't already active.
-        /// </summary>
-        private static async Task CreateNamedPipeServer(Action<IReadOnlyList<string>> otherInstanceCallback)
+        private static async Task CreateNamedPipeServer(string uniqueName,
+            Action<IReadOnlyList<string>> otherInstanceCallback)
         {
+            var pipeName = GetPipeName(uniqueName);
             while (true)
             {
                 // Create pipe and start the async connection wait
-                using var pipeServer = new NamedPipeServerStream(GetPipeName(), PipeDirection.In, 1,
+                using var pipeServer = new NamedPipeServerStream(pipeName, PipeDirection.In, 1,
                     PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
 
                 // Async wait for connections

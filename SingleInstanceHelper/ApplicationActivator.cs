@@ -29,15 +29,15 @@ namespace SingleInstanceHelper
         /// When not the first instance, the command line args will be passed to the first one.
         /// </summary>
         /// <param name="otherInstanceCallback">Callback to execute on the first instance with command line args
-        /// from subsequent launches. If specified, it will run on the current synchronization context.</param>
+        /// from subsequent launches. It will run on the current synchronization context.</param>
         /// <param name="uniqueName">A unique identifier of the app running. Calling this method from
         /// many different apps with the same <paramref name="uniqueName"/> specified will return
         /// <see langword="true"/> only on one of them</param>
-        /// <returns>Whether this is the first instance of the application that
-        /// called this method.</returns>
+        /// <returns>Whether this is the first instance of the application that called this method.</returns>
         public static async Task<bool> LaunchOrReturnAsync(
-            Action<IReadOnlyList<string>>? otherInstanceCallback = null, string? uniqueName = null)
+            Action<IReadOnlyList<string>> otherInstanceCallback, string? uniqueName = null)
         {
+            if (otherInstanceCallback == null) throw new ArgumentNullException(nameof(otherInstanceCallback));
             var un = uniqueName ?? DefaultUniqueName;
             if (IsApplicationFirstInstance(un))
             {

@@ -6,7 +6,7 @@ The attached notices are provided for information only.
 License notice for AutoIt Consulting inspired code
 --------------------------------
 
-https://github.com/AutoItConsulting/examples-csharp/tree/master/MutexSingleInstanceAndNamedPipe
+https://www.autoitconsulting.com/site/development/single-instance-winform-app-csharp-mutex-named-pipes/
 
 MIT License
 

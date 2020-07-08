@@ -35,10 +35,11 @@
             // label1
             // 
             this.label1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 28.125F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 28.125F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte) (0)));
             this.label1.Location = new System.Drawing.Point(0, 0);
+            this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(800, 376);
+            this.label1.Size = new System.Drawing.Size(400, 196);
             this.label1.TabIndex = 1;
             this.label1.Text = "Hello .NET Core!";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -46,9 +47,10 @@
             // buttonExit
             // 
             this.buttonExit.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.buttonExit.Location = new System.Drawing.Point(0, 376);
+            this.buttonExit.Location = new System.Drawing.Point(0, 196);
+            this.buttonExit.Margin = new System.Windows.Forms.Padding(2);
             this.buttonExit.Name = "buttonExit";
-            this.buttonExit.Size = new System.Drawing.Size(800, 74);
+            this.buttonExit.Size = new System.Drawing.Size(400, 38);
             this.buttonExit.TabIndex = 1;
             this.buttonExit.Text = "E&xit";
             this.buttonExit.UseVisualStyleBackColor = true;
@@ -56,21 +58,21 @@
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
+            this.ClientSize = new System.Drawing.Size(400, 234);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.buttonExit);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Form1";
             this.ResumeLayout(false);
-
         }
 
-        #endregion
-
-        private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button buttonExit;
+        private System.Windows.Forms.Label label1;
+
+        #endregion
     }
 }
 

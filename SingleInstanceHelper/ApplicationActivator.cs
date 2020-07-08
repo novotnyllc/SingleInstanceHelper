@@ -54,7 +54,7 @@ namespace SingleInstanceHelper
                 new Payload {CommandLineArguments = Environment.GetCommandLineArgs().ToList()};
 
             // Send the message
-            await SendOptionsToNamedPipe(un, namedPipeXmlPayload);
+            await SendOptionsToNamedPipe(un, namedPipeXmlPayload).ConfigureAwait(false);
             return false; // Signal to quit
         }
 
